@@ -32,7 +32,3 @@ app/google-services.json
 *.keystore
 *.log
 captures/
-
-# Python (tools/dash_simulator.py)
-__pycache__/
-*.pyc
