@@ -31,16 +31,4 @@ app/google-services.json
 *.jks
 *.keystore
 *.log
-firebase-debug.log
-crashlytics-build.properties
-*.hprof
-*.dmp
-*.stacktrace
-crash_exports/
-crash-exports/
-crashlytics/
 captures/
-opendash_expenses_audit.png
-
-# GSD planning docs are local-only for this recovery pass.
-.planning/

@@ -8,16 +8,11 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -32,7 +27,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.opendash.data.Ride
-import com.example.opendash.navigation.route.PolylineCodec
+import com.example.opendash.dash.nav.PolylineCodec
 import com.example.opendash.ui.OpenDashIcons
 import com.example.opendash.ui.components.*
 import com.example.opendash.ui.theme.*
@@ -44,7 +39,6 @@ import java.util.Locale
 @Composable
 fun RidesScreen(ridesViewModel: RidesViewModel = viewModel()) {
     val rides by ridesViewModel.rides.collectAsState()
-    var ridePendingDelete by remember { mutableStateOf<Ride?>(null) }
 
     Column(
         modifier = Modifier
@@ -61,39 +55,10 @@ fun RidesScreen(ridesViewModel: RidesViewModel = viewModel()) {
             RideTotals(rides)
             Spacer(Modifier.height(14.dp))
             rides.forEach { ride ->
-                RideCard(ride, onDelete = { ridePendingDelete = ride })
+                RideCard(ride, onDelete = { ridesViewModel.deleteRide(ride) })
                 Spacer(Modifier.height(12.dp))
             }
         }
-    }
-
-    ridePendingDelete?.let { ride ->
-        AlertDialog(
-            onDismissRequest = { ridePendingDelete = null },
-            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
-            title = { Text("Delete ride?", color = MaterialTheme.colorScheme.onSurface) },
-            text = {
-                Text(
-                    "This removes the saved ride from this device.",
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        ridesViewModel.deleteRide(ride)
-                        ridePendingDelete = null
-                    },
-                ) {
-                    Text("Delete", color = MaterialTheme.colorScheme.error)
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { ridePendingDelete = null }) {
-                    Text("Cancel", color = MaterialTheme.colorScheme.onSurfaceVariant)
-                }
-            },
-        )
     }
 }
 
@@ -113,8 +78,8 @@ private fun RideTotals(rides: List<Ride>) {
 @Composable
 private fun Stat(value: String, label: String) {
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        Text(value, color = MaterialTheme.colorScheme.primary, fontSize = 22.sp, fontWeight = FontWeight.Bold, fontFamily = GeistFamily)
-        Text(label, color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp, fontFamily = GeistFamily)
+        Text(value, color = Gold, fontSize = 22.sp, fontWeight = FontWeight.Bold, fontFamily = GeistFamily)
+        Text(label, color = TextLo, fontSize = 12.sp, fontFamily = GeistFamily)
     }
 }
 
@@ -130,20 +95,20 @@ private fun RideCard(ride: Ride, onDelete: () -> Unit) {
                 // Track sketch
                 Box(
                     contentAlignment = Alignment.Center,
-                    modifier = Modifier.size(64.dp).clip(RoundedCornerShape(20.dp)).background(MaterialTheme.colorScheme.surfaceContainerHighest),
+                    modifier = Modifier.size(64.dp).clip(RoundedCornerShape(20.dp)).background(Surf2),
                 ) {
                     if (track.size >= 2) TrackSketch(track, Modifier.fillMaxSize().padding(8.dp))
-                    else Icon(OpenDashIcons.Route, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(22.dp))
+                    else Icon(OpenDashIcons.Route, contentDescription = null, tint = TextLo, modifier = Modifier.size(22.dp))
                 }
                 Spacer(Modifier.width(14.dp))
                 Column(Modifier.weight(1f)) {
-                    Text(fmtDate(ride.startMs), color = MaterialTheme.colorScheme.onSurface, fontSize = 15.sp, fontWeight = FontWeight.SemiBold, fontFamily = GeistFamily)
+                    Text(fmtDate(ride.startMs), color = TextHi, fontSize = 15.sp, fontWeight = FontWeight.SemiBold, fontFamily = GeistFamily)
                     Text(
                         "${fmtTime(ride.startMs)} – ${fmtTime(ride.endMs)}",
-                        color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp, fontFamily = GeistFamily,
+                        color = TextLo, fontSize = 12.sp, fontFamily = GeistFamily,
                     )
                 }
-                Text("%.1f km".format(ride.distanceKm), color = MaterialTheme.colorScheme.primary, fontSize = 18.sp, fontWeight = FontWeight.Bold, fontFamily = GeistFamily)
+                Text("%.1f km".format(ride.distanceKm), color = Gold, fontSize = 18.sp, fontWeight = FontWeight.Bold, fontFamily = GeistFamily)
             }
             Spacer(Modifier.height(12.dp))
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
@@ -152,10 +117,10 @@ private fun RideCard(ride: Ride, onDelete: () -> Unit) {
                 MiniStat("%.0f km/h".format(ride.maxSpeedKmh), "max")
                 Box(
                     contentAlignment = Alignment.Center,
-                    modifier = Modifier.size(34.dp).clip(CircleShape).background(MaterialTheme.colorScheme.surfaceContainerHighest)
+                    modifier = Modifier.size(34.dp).clip(CircleShape).background(Surf2)
                         .clickable { onDelete() },
                 ) {
-                    Icon(OpenDashIcons.X, contentDescription = "Delete ride", tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(16.dp))
+                    Icon(OpenDashIcons.X, contentDescription = "Delete ride", tint = TextLo, modifier = Modifier.size(16.dp))
                 }
             }
         }
@@ -165,15 +130,13 @@ private fun RideCard(ride: Ride, onDelete: () -> Unit) {
 @Composable
 private fun MiniStat(value: String, label: String) {
     Column(horizontalAlignment = Alignment.Start) {
-        Text(value, color = MaterialTheme.colorScheme.onSurface, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, fontFamily = GeistFamily)
-        Text(label, color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 11.sp, fontFamily = GeistFamily)
+        Text(value, color = TextHi, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, fontFamily = GeistFamily)
+        Text(label, color = TextLo, fontSize = 11.sp, fontFamily = GeistFamily)
     }
 }
 
 @Composable
-private fun TrackSketch(points: List<com.example.opendash.navigation.route.GeoPoint>, modifier: Modifier) {
-    val primary = MaterialTheme.colorScheme.primary
-    val onSurface = MaterialTheme.colorScheme.onSurface
+private fun TrackSketch(points: List<com.example.opendash.dash.nav.GeoPoint>, modifier: Modifier) {
     Canvas(modifier) {
         val minLat = points.minOf { it.lat }; val maxLat = points.maxOf { it.lat }
         val minLng = points.minOf { it.lng }; val maxLng = points.maxOf { it.lng }
@@ -186,12 +149,12 @@ private fun TrackSketch(points: List<com.example.opendash.navigation.route.GeoPo
             val y = (size.height - (p.lat - minLat) / span * size.height).toFloat()
             if (i == 0) path.moveTo(x, y) else path.lineTo(x, y)
         }
-        drawPath(path, primary, style = Stroke(width = 3f, cap = StrokeCap.Round, join = StrokeJoin.Round))
+        drawPath(path, Gold, style = Stroke(width = 3f, cap = StrokeCap.Round, join = StrokeJoin.Round))
         // start (green-ish) + end (gold) dots
         val first = points.first(); val last = points.last()
-        drawCircle(onSurface, 2.5f, Offset(((first.lng - minLng) / span * size.width).toFloat(),
+        drawCircle(TextHi, 2.5f, Offset(((first.lng - minLng) / span * size.width).toFloat(),
             (size.height - (first.lat - minLat) / span * size.height).toFloat()))
-        drawCircle(primary, 2.5f, Offset(((last.lng - minLng) / span * size.width).toFloat(),
+        drawCircle(Gold, 2.5f, Offset(((last.lng - minLng) / span * size.width).toFloat(),
             (size.height - (last.lat - minLat) / span * size.height).toFloat()))
     }
 }
@@ -202,16 +165,16 @@ private fun EmptyRides() {
         Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth()) {
             Box(
                 contentAlignment = Alignment.Center,
-                modifier = Modifier.size(56.dp).clip(CircleShape).background(MaterialTheme.colorScheme.surfaceContainerHighest),
+                modifier = Modifier.size(56.dp).clip(CircleShape).background(Surf2),
             ) {
-                Icon(OpenDashIcons.Route, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(26.dp))
+                Icon(OpenDashIcons.Route, contentDescription = null, tint = TextLo, modifier = Modifier.size(26.dp))
             }
             Spacer(Modifier.height(14.dp))
-            Text("No rides recorded yet", color = MaterialTheme.colorScheme.onSurface, fontSize = 15.sp, fontWeight = FontWeight.SemiBold, fontFamily = GeistFamily)
+            Text("No rides recorded yet", color = TextHi, fontSize = 15.sp, fontWeight = FontWeight.SemiBold, fontFamily = GeistFamily)
             Spacer(Modifier.height(6.dp))
             Text(
-                "Ride history will appear here when rides are recorded by app-only features.",
-                color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 13.sp,
+                "Connect to your dash to start a ride — it's saved automatically when you disconnect.",
+                color = TextLo, fontSize = 13.sp,
                 modifier = Modifier.padding(horizontal = 8.dp),
             )
         }
@@ -224,5 +187,3 @@ private fun fmtDuration(sec: Long): String {
     val h = sec / 3600; val m = (sec % 3600) / 60
     return if (h > 0) "${h}h ${m}m" else "${m}m"
 }
-
-

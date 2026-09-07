@@ -16,11 +16,6 @@ data class VehicleProfile(
     val service: String,
 )
 
-data class VehicleStoreSnapshot(
-    val vehicles: List<VehicleProfile>,
-    val activeVehicleId: String,
-)
-
 object VehicleStore {
     const val DEFAULT_VEHICLE_ID = "default"
     private const val PREFS = "vehicle_profiles"
@@ -69,7 +64,7 @@ object VehicleStore {
             ?.takeIf { id -> loaded.any { it.id == id } }
             ?: loaded.first().id
         initialized = true
-        persist(context, sync = false)
+        persist(context)
     }
 
     fun activeVehicle(): VehicleProfile =
@@ -79,37 +74,21 @@ object VehicleStore {
         val created = profile.copy(id = profile.id.ifBlank { UUID.randomUUID().toString() })
         _vehicles.value = _vehicles.value + created
         _activeVehicleId.value = created.id
-        persist(context, sync = true)
+        persist(context)
     }
 
     fun update(context: Context, profile: VehicleProfile) {
         _vehicles.value = _vehicles.value.map { if (it.id == profile.id) profile else it }
-        persist(context, sync = true)
+        persist(context)
     }
 
     fun select(context: Context, vehicleId: String) {
         if (_vehicles.value.none { it.id == vehicleId }) return
         _activeVehicleId.value = vehicleId
-        persist(context, sync = true)
+        persist(context)
     }
 
-    fun snapshot(): VehicleStoreSnapshot =
-        VehicleStoreSnapshot(
-            vehicles = _vehicles.value,
-            activeVehicleId = _activeVehicleId.value,
-        )
-
-    @Synchronized
-    fun applySnapshot(context: Context, snapshot: VehicleStoreSnapshot) {
-        val loaded = snapshot.vehicles.ifEmpty { listOf(defaultVehicle) }
-        _vehicles.value = loaded
-        _activeVehicleId.value = snapshot.activeVehicleId
-            .takeIf { id -> loaded.any { it.id == id } }
-            ?: loaded.first().id
-        persist(context, sync = false)
-    }
-
-    private fun persist(context: Context, sync: Boolean) {
+    private fun persist(context: Context) {
         val array = JSONArray()
         _vehicles.value.forEach { vehicle ->
             array.put(
@@ -127,10 +106,5 @@ object VehicleStore {
             .putString(KEY_VEHICLES, array.toString())
             .putString(KEY_ACTIVE, _activeVehicleId.value)
             .apply()
-        if (sync) {
-            Thread {
-                runCatching { SyncRepository.get(context.applicationContext).pushProfileSettings() }
-            }.start()
-        }
     }
 }

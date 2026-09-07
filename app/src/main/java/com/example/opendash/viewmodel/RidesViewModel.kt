@@ -11,7 +11,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
-/** Recorded rides for RidesScreen. Future app-only ride recording writes through SyncRepository. */
+/** Recorded rides for RidesScreen. Rides are written by [DashViewModel] on disconnect. */
 class RidesViewModel(app: Application) : AndroidViewModel(app) {
     private val repo = SyncRepository.get(app)
 

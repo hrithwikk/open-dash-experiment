@@ -1,14 +1,14 @@
 package com.example.opendash.data
 
-import com.example.opendash.navigation.route.GeoPoint
-import com.example.opendash.navigation.route.PolylineCodec
+import com.example.opendash.dash.nav.GeoPoint
+import com.example.opendash.dash.nav.PolylineCodec
 
 /**
- * Accumulates GPS fixes for one ride recording session and produces a
+ * Accumulates GPS fixes for one ride (a connect→disconnect dash session) and produces a
  * [Ride] at the end. Points are thinned to ~every [MIN_MOVE_M] metres so the stored track
  * stays small; distance/speed are computed from the accepted points.
  *
- * Not thread-safe - drive it from a single recording coroutine.
+ * Not thread-safe — driven from a single coroutine in DashViewModel.
  */
 class RideRecorder {
 

@@ -35,8 +35,7 @@ class SyncRepository private constructor(context: Context) {
             instance ?: synchronized(this) { instance ?: SyncRepository(context.applicationContext).also { instance = it } }
     }
 
-    private val appContext = context.applicationContext
-    private val db = OpenDashDb.get(appContext)
+    private val db = OpenDashDb.get(context)
     // Firebase is optional (bring-your-own-project). When no google-services.json was
     // bundled, these stay null and every mirror/listen call is a no-op — the app runs
     // fully local. See [FirebaseGate].
@@ -103,11 +102,6 @@ class SyncRepository private constructor(context: Context) {
             vehicleId = vehicleId,
         )
         db.upsertExpense(e); pushExpense(e); bump()
-    }
-    fun upsertExpense(e: Expense) {
-        db.upsertExpense(e)
-        pushExpense(e)
-        bump()
     }
     fun deleteExpense(e: Expense) { db.deleteExpenseBySid(e.sid); userDoc()?.collection("expenses")?.document(e.sid)?.delete(); bump() }
 
@@ -182,31 +176,6 @@ class SyncRepository private constructor(context: Context) {
                 "endLat" to r.endLat, "endLng" to r.endLng))
     }
 
-    fun pushProfileSettings() {
-        val u = userDoc() ?: return
-        pushVehicleSettings(u)
-    }
-
-    private fun pushVehicleSettings(u: DocumentReference) {
-        val snapshot = VehicleStore.snapshot()
-        u.collection("settings").document("vehicles").set(
-            mapOf(
-                "activeVehicleId" to snapshot.activeVehicleId,
-                "updatedMs" to System.currentTimeMillis(),
-                "vehicles" to snapshot.vehicles.map { vehicle ->
-                    mapOf(
-                        "id" to vehicle.id,
-                        "title" to vehicle.title,
-                        "nickname" to vehicle.nickname,
-                        "puc" to vehicle.puc,
-                        "insurance" to vehicle.insurance,
-                        "service" to vehicle.service,
-                    )
-                },
-            ),
-        )
-    }
-
     // ── Sync lifecycle ───────────────────────────────────────────────────
     fun startSync() {
         val u = userDoc() ?: return
@@ -215,7 +184,11 @@ class SyncRepository private constructor(context: Context) {
 
         listen(u.collection("fuel"),
             uploadLocal = { VehicleStore.vehicles.value.flatMap { db.fuelFills(it.id) }.forEach { pushFuel(it) } },
-            apply = { doc -> db.upsertFuel(remoteFuelFillup(doc.id, doc.data.orEmpty())) },
+            apply = { doc -> db.upsertFuel(FuelFillup(
+                sid = doc.id, dateMs = doc.getLong("dateMs") ?: 0L, litres = doc.getDouble("litres") ?: 0.0,
+                cost = doc.getDouble("cost") ?: 0.0, odometerKm = (doc.getLong("odometerKm") ?: 0L).toInt(),
+                location = doc.getString("location") ?: "",
+                vehicleId = doc.getString("vehicleId") ?: VehicleStore.DEFAULT_VEHICLE_ID)) },
             remove = { db.deleteFuelBySid(it) })
 
         listen(u.collection("maintenance"),
@@ -229,7 +202,12 @@ class SyncRepository private constructor(context: Context) {
 
         listen(u.collection("expenses"),
             uploadLocal = { VehicleStore.vehicles.value.flatMap { db.expenses(it.id) }.forEach { pushExpense(it) } },
-            apply = { doc -> db.upsertExpense(remoteExpense(doc.id, doc.data.orEmpty())) },
+            apply = { doc -> db.upsertExpense(Expense(
+                sid = doc.id, dateMs = doc.getLong("dateMs") ?: 0L,
+                category = doc.getString("category") ?: "Others",
+                amount = doc.getDouble("amount") ?: 0.0,
+                note = doc.getString("note") ?: "",
+                vehicleId = doc.getString("vehicleId") ?: VehicleStore.DEFAULT_VEHICLE_ID)) },
             remove = { db.deleteExpenseBySid(it) })
 
         listen(u.collection("saved"),
@@ -263,8 +241,6 @@ class SyncRepository private constructor(context: Context) {
                 }
             }
         }
-
-        syncProfileSettings(u)
     }
 
     fun stopSync() { regs.forEach { it.remove() }; regs.clear() }
@@ -290,116 +266,4 @@ class SyncRepository private constructor(context: Context) {
             }
         }
     }
-
-    private fun syncProfileSettings(u: DocumentReference) {
-        listenSettingsDoc(
-            doc = u.collection("settings").document("vehicles"),
-            pushLocal = { pushVehicleSettings(u) },
-            applyRemote = ::applyVehicleSettings,
-        )
 }
-
-    private fun listenSettingsDoc(
-        doc: DocumentReference,
-        pushLocal: () -> Unit,
-        applyRemote: (DocumentSnapshot) -> Unit,
-    ) {
-        doc.get().addOnSuccessListener { snap ->
-            if (!snap.exists()) io.launch { pushLocal() }
-        }
-        regs += doc.addSnapshotListener { snap, err ->
-            if (err != null || snap?.exists() != true) return@addSnapshotListener
-            io.launch {
-                applyRemote(snap)
-                bump()
-            }
-        }
-    }
-
-    private fun applyVehicleSettings(doc: DocumentSnapshot) {
-        val vehicles = (doc.get("vehicles") as? List<*>)?.mapNotNull { raw ->
-            val map = raw as? Map<*, *> ?: return@mapNotNull null
-            VehicleProfile(
-                id = map.string("id").ifBlank { return@mapNotNull null },
-                title = map.string("title").ifBlank { "Motorcycle" },
-                nickname = map.string("nickname"),
-                puc = map.string("puc").ifBlank { "Not set" },
-                insurance = map.string("insurance").ifBlank { "Not set" },
-                service = map.string("service").ifBlank { "Not set" },
-            )
-        }.orEmpty()
-        if (vehicles.isEmpty()) return
-        VehicleStore.applySnapshot(
-            appContext,
-            VehicleStoreSnapshot(
-                vehicles = vehicles,
-                activeVehicleId = doc.getString("activeVehicleId") ?: vehicles.first().id,
-            ),
-        )
-    }
-private fun Map<*, *>.string(key: String): String =
-        (this[key] as? String).orEmpty()
-
-    private fun Map<*, *>.long(key: String): Long? =
-        when (val value = this[key]) {
-            is Long -> value
-            is Int -> value.toLong()
-            is Double -> value.toLong()
-            else -> null
-        }
-
-    private fun Map<*, *>.double(key: String): Double? =
-        when (val value = this[key]) {
-            is Double -> value
-            is Float -> value.toDouble()
-            is Long -> value.toDouble()
-            is Int -> value.toDouble()
-            else -> null
-        }
-
-    private fun Map<*, *>.boolean(key: String): Boolean? =
-        this[key] as? Boolean
-}
-
-internal fun remoteFuelFillup(sid: String, fields: Map<String, Any?>): FuelFillup =
-    FuelFillup(
-        sid = sid,
-        dateMs = fields.fieldLong("dateMs") ?: 0L,
-        litres = fields.fieldDouble("litres") ?: 0.0,
-        cost = fields.fieldDouble("cost") ?: 0.0,
-        odometerKm = (fields.fieldLong("odometerKm") ?: 0L).toInt(),
-        location = fields.fieldString("location"),
-        vehicleId = fields.fieldString("vehicleId").ifBlank { VehicleStore.DEFAULT_VEHICLE_ID },
-    )
-
-internal fun remoteExpense(sid: String, fields: Map<String, Any?>): Expense =
-    Expense(
-        sid = sid,
-        dateMs = fields.fieldLong("dateMs") ?: 0L,
-        category = fields.fieldString("category").ifBlank { "Others" },
-        amount = fields.fieldDouble("amount") ?: 0.0,
-        note = fields.fieldString("note"),
-        vehicleId = fields.fieldString("vehicleId").ifBlank { VehicleStore.DEFAULT_VEHICLE_ID },
-    )
-
-
-private fun Map<*, *>.fieldString(key: String): String =
-    (this[key] as? String).orEmpty()
-
-private fun Map<*, *>.fieldLong(key: String): Long? =
-    when (val value = this[key]) {
-        is Long -> value
-        is Int -> value.toLong()
-        is Double -> value.toLong()
-        else -> null
-    }
-
-private fun Map<*, *>.fieldDouble(key: String): Double? =
-    when (val value = this[key]) {
-        is Double -> value
-        is Float -> value.toDouble()
-        is Long -> value.toDouble()
-        is Int -> value.toDouble()
-        else -> null
-    }
-

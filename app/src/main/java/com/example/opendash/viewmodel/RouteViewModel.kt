@@ -8,9 +8,9 @@ import android.location.LocationManager
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.opendash.data.SharedLocation
-import com.example.opendash.navigation.route.GeoPoint
-import com.example.opendash.navigation.route.Route
-import com.example.opendash.navigation.route.Router
+import com.example.opendash.dash.nav.GeoPoint
+import com.example.opendash.dash.nav.Route
+import com.example.opendash.dash.nav.Router
 import com.example.opendash.util.LocationParser
 import com.example.opendash.util.DebugLog
 import kotlinx.coroutines.Dispatchers
@@ -18,7 +18,6 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import kotlinx.coroutines.withTimeoutOrNull
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -85,16 +84,14 @@ class RouteViewModel(app: Application) : AndroidViewModel(app) {
         val loc = LocationParser.parse(text)
         _state.value = RouteState(
             destination = loc,
-            isResolving = loc.needsExpansion || (loc.url != null && loc.lat == null && loc.lng == null),
+            isResolving = loc.needsExpansion,
             pendingNavigate = true,
         )
         if (loc.lat != null && loc.lng != null) {
             computeRoute(loc.lat, loc.lng)
         } else if (loc.url != null) {
             viewModelScope.launch {
-                val (urlCoords, resolvedName) = withTimeoutOrNull(12_000L) {
-                    LocationParser.resolve(loc.url)
-                } ?: (null to null)
+                val (urlCoords, resolvedName) = LocationParser.resolve(loc.url)
                 val name = when {
                     loc.name.isNotBlank() && loc.name != "Loading…" -> loc.name
                     !resolvedName.isNullOrBlank() -> resolvedName
@@ -161,13 +158,6 @@ class RouteViewModel(app: Application) : AndroidViewModel(app) {
     fun onNavigated() { _state.value = _state.value.copy(pendingNavigate = false) }
     fun clear() { _state.value = RouteState() }
 
-    fun refreshRouteIfPossible() {
-        val d = _state.value.destination ?: return
-        val lat = d.lat ?: return
-        val lng = d.lng ?: return
-        computeRoute(lat, lng)
-    }
-
     private fun fmtKm(m: Double) = "%.0f km".format(m / 1000.0)
     private fun fmtDuration(sec: Double): String {
         val total = (sec / 60.0).toInt()
@@ -176,4 +166,3 @@ class RouteViewModel(app: Application) : AndroidViewModel(app) {
     private fun fmtEta(sec: Double): String =
         SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date(System.currentTimeMillis() + (sec * 1000).toLong()))
 }
-

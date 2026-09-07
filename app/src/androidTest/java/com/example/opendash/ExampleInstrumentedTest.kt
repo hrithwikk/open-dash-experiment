@@ -19,15 +19,6 @@ class ExampleInstrumentedTest {
     fun useAppContext() {
         // Context of the app under test.
         val appContext = InstrumentationRegistry.getInstrumentation().targetContext
-        assertTrue(
-            appContext.packageName in setOf(
-                "com.opendash.app",
-                "com.opendash.app.mui3",
-                "com.subtlesayak.opendash",
-                "com.subtlesayak.opendash.mui3",
-                "com.opendash.mapboxtest",
-                "com.opendash.mapboxtest.mui3",
-            ),
-        )
+        assertEquals("com.example.opendash", appContext.packageName)
     }
 }

@@ -15,8 +15,8 @@ import java.util.UUID
  * applies remote changes back via the upsert / delete-by-sid methods. All calls are
  * synchronous; callers run them off the main thread.
  */
-class OpenDashDb internal constructor(context: Context, name: String = "opendash.db") :
-    SQLiteOpenHelper(context.applicationContext, name, null, 7) {
+class OpenDashDb private constructor(context: Context) :
+    SQLiteOpenHelper(context.applicationContext, "opendash.db", null, 7) {
 
     companion object {
         @Volatile private var instance: OpenDashDb? = null

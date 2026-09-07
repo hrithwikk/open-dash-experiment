@@ -5,7 +5,6 @@ import android.graphics.Canvas
 import android.graphics.Paint
 import android.graphics.Path
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -18,9 +17,7 @@ import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
-import com.example.opendash.BuildConfig
-import com.example.opendash.data.MapboxNavigationSettings
-import com.example.opendash.navigation.route.GeoPoint
+import com.example.opendash.dash.nav.GeoPoint
 import org.maplibre.android.MapLibre
 import org.maplibre.android.camera.CameraPosition
 import org.maplibre.android.camera.CameraUpdateFactory
@@ -34,19 +31,17 @@ import org.maplibre.android.plugins.annotation.LineOptions
 import org.maplibre.android.plugins.annotation.SymbolManager
 import org.maplibre.android.plugins.annotation.SymbolOptions
 
-// Default phone-preview basemap. Release builds use Mapbox tiles when configured.
+// Free, keyless, redistributable vector basemap (look-first, per the distribution decision).
 private const val STYLE_URL = "https://tiles.openfreemap.org/styles/liberty"
-private fun mapboxNavigationStyleId(night: Boolean): String =
-    if (night) "dark-v11" else "streets-v12"
 private const val FOLLOW_ZOOM = 15.5
-private const val NAV_ZOOM = 18.0
-private const val NAV_TILT = 30.0
+private const val NAV_ZOOM = 17.5
+private const val NAV_TILT = 45.0
 private const val RIDER_ICON = "rider-chevron"
 private const val DEST_ICON = "dest-pin"
 
 /**
- * In-app phone map. Uses Mapbox raster tiles when the primary Mapbox provider and
- * access token are configured, with OpenFreeMap as the local fallback.
+ * In-app phone map (MapLibre + OpenFreeMap). Keyless and redistributable — no Google
+ * Maps SDK / API key. The physical dash still uses the off-screen power-efficient renderer.
  *
  * Modes: [fitRoute] frames the whole route; [navMode] tilts/zooms/rotates to heading with a
  * rider chevron; default follows the rider north-up.
@@ -65,17 +60,6 @@ fun OpenDashMap(
 ) {
     val context = LocalContext.current
     remember { MapLibre.getInstance(context) }
-    remember(context) {
-        MapboxNavigationSettings.init(context.applicationContext)
-        true
-    }
-    val mapboxNavigationEnabled by MapboxNavigationSettings.mapboxNavigationEnabled.collectAsState()
-    val useMapboxPreview =
-        BuildConfig.USE_MAPBOX_NAVIGATION &&
-            mapboxNavigationEnabled &&
-            BuildConfig.MAPBOX_ACCESS_TOKEN.isNotBlank()
-    val mapboxStyleId = mapboxNavigationStyleId(false)
-    val styleKey = if (useMapboxPreview) "mapbox-$mapboxStyleId" else "openfreemap"
     val mapView = remember { MapView(context) }
 
     var map by remember { mutableStateOf<MapLibreMap?>(null) }
@@ -114,33 +98,19 @@ fun OpenDashMap(
                 isRotateGesturesEnabled = false
                 isTiltGesturesEnabled = false
                 isCompassEnabled = false
-                isAttributionEnabled = true
+                isAttributionEnabled = true   // OSM/OpenFreeMap attribution (keep — licensing)
                 isLogoEnabled = false
             }
-        }
-    }
-
-    LaunchedEffect(map, styleKey) {
-        if (destroyed) return@LaunchedEffect
-        val m = map ?: return@LaunchedEffect
-        styleReady = false
-        lineMgr = null
-        symbolMgr = null
-        val builder = if (useMapboxPreview) {
-            Style.Builder().fromJson(mapboxRasterStyleJson(BuildConfig.MAPBOX_ACCESS_TOKEN, mapboxStyleId))
-        } else {
-            Style.Builder().fromUri(STYLE_URL)
-        }
-        m.setStyle(builder) { style ->
-            if (destroyed) return@setStyle
-            style.addImage(RIDER_ICON, chevronBitmap())
-            style.addImage(DEST_ICON, destPinBitmap())
-            lineMgr = LineManager(mapView, m, style)
-            symbolMgr = SymbolManager(mapView, m, style).apply {
-                iconAllowOverlap = true
-                iconIgnorePlacement = true
+            m.setStyle(Style.Builder().fromUri(STYLE_URL)) { style ->
+                if (destroyed) return@setStyle
+                style.addImage(RIDER_ICON, chevronBitmap())
+                style.addImage(DEST_ICON, destPinBitmap())
+                lineMgr = LineManager(mapView, m, style)
+                symbolMgr = SymbolManager(mapView, m, style).apply {
+                    iconAllowOverlap = true; iconIgnorePlacement = true
+                }
+                styleReady = true
             }
-            styleReady = true
         }
     }
 
@@ -193,34 +163,7 @@ fun OpenDashMap(
     AndroidView(factory = { mapView }, modifier = modifier)
 }
 
-private fun mapboxRasterStyleJson(token: String, styleId: String): String {
-    val safeToken = token.replace("\\", "\\\\").replace("\"", "\\\"")
-    return """
-        {
-          "version": 8,
-          "name": "OpenDash Mapbox Navigation",
-          "sources": {
-            "mapbox-navigation": {
-              "type": "raster",
-              "tiles": [
-                "https://api.mapbox.com/styles/v1/mapbox/$styleId/tiles/512/{z}/{x}/{y}?access_token=$safeToken"
-              ],
-              "tileSize": 512,
-              "attribution": "Map data © OpenStreetMap contributors, Imagery © Mapbox"
-            }
-          },
-          "layers": [
-            {
-              "id": "mapbox-navigation",
-              "type": "raster",
-              "source": "mapbox-navigation"
-            }
-          ]
-        }
-    """.trimIndent()
-}
-
-/** Blue chevron-in-a-circle, pointing "up" (rotated to heading by the symbol). */
+/** Google-style blue chevron-in-a-circle, pointing "up" (rotated to heading by the symbol). */
 private fun chevronBitmap(): Bitmap {
     val s = 84
     val bmp = Bitmap.createBitmap(s, s, Bitmap.Config.ARGB_8888)
@@ -249,5 +192,3 @@ private fun destPinBitmap(): Bitmap {
     p.color = android.graphics.Color.WHITE; c.drawCircle(s / 2f, s / 2f, s * 0.09f, p)
     return bmp
 }
-
-

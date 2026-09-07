@@ -8,10 +8,10 @@ import org.junit.Test
 
 class LocationParserTest {
     @Test
-    fun parse_acceptsGoogleMapsHostWithCoordinates() {
+    fun parse_acceptsHttpsKnownGoogleMapsHost() {
         val location = LocationParser.parse("Meet here https://maps.google.com/?q=12.9716,77.5946")
 
-        assertEquals("https://maps.google.com/?q=12.9716,77.5946", location.url)
+        assertEquals("Meet here", location.name)
         assertEquals(12.9716, location.lat!!, 0.000001)
         assertEquals(77.5946, location.lng!!, 0.000001)
         assertFalse(location.needsExpansion)
@@ -48,13 +48,11 @@ class LocationParserTest {
     }
 
     @Test
-    fun parse_acceptsGoogleShortMapHostForExpansion() {
+    fun parse_acceptsKnownShortMapHostForExpansion() {
         val location = LocationParser.parse("https://maps.app.goo.gl/abc123")
 
+        assertEquals("Loading…", location.name)
         assertEquals("https://maps.app.goo.gl/abc123", location.url)
-        assertNull(location.lat)
-        assertNull(location.lng)
-        assertEquals("Shared location", location.name)
         assertTrue(location.needsExpansion)
     }
 }
