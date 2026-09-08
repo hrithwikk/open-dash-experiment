@@ -113,7 +113,7 @@ class DashViewModel(app: Application) : AndroidViewModel(app) {
         if (!enabled) com.example.opendash.util.RideLogFile.stop()
     }
 
-    fun latestRideLogFile(): java.io.File? = com.example.opendash.util.RideLogFile.latestFile(app)
+    fun latestRideLogFile(): java.io.File? = com.example.opendash.util.RideLogFile.latestFile(getApplication())
 
     private var encoder: DashEncoder? = null
     private var streamJob: Job? = null
