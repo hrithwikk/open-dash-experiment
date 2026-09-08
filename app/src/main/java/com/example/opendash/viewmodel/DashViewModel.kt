@@ -99,6 +99,22 @@ class DashViewModel(app: Application) : AndroidViewModel(app) {
     private val mediaInfo = MediaInfoProvider(app)
     private val callController = CallController(app)
 
+    // ── Ride diagnostics (optional file capture of dash bytes + GPS for offline
+    // analysis when no debugger is attached — e.g. correlating unmapped telemetry
+    // bytes against real speed/position after a ride). Off by default. ──
+    private val diagnosticsPrefs = app.getSharedPreferences("dash_diagnostics", android.content.Context.MODE_PRIVATE)
+    private val _diagnosticLogging = MutableStateFlow(diagnosticsPrefs.getBoolean("enabled", false))
+    val diagnosticLogging = _diagnosticLogging.asStateFlow()
+    private var lastGpsLogAt = 0L
+
+    fun setDiagnosticLogging(enabled: Boolean) {
+        diagnosticsPrefs.edit().putBoolean("enabled", enabled).apply()
+        _diagnosticLogging.value = enabled
+        if (!enabled) com.example.opendash.util.RideLogFile.stop()
+    }
+
+    fun latestRideLogFile(): java.io.File? = com.example.opendash.util.RideLogFile.latestFile(app)
+
     private var encoder: DashEncoder? = null
     private var streamJob: Job? = null
     private var mediaObserveJob: Job? = null
@@ -232,6 +248,11 @@ class DashViewModel(app: Application) : AndroidViewModel(app) {
         viewModelScope.launch {
             session.state.collect { state ->
                 refreshStage()
+                when (state) {
+                    DashState.CONNECTING -> if (_diagnosticLogging.value) com.example.opendash.util.RideLogFile.start(app)
+                    DashState.IDLE -> com.example.opendash.util.RideLogFile.stop()
+                    else -> {}
+                }
                 if (state == DashState.READY) startStream()
             }
         }
@@ -724,6 +745,19 @@ class DashViewModel(app: Application) : AndroidViewModel(app) {
         }
 
         val loc = location.location.value
+
+        // Ride diagnostics: sample GPS once a second alongside whatever dash bytes
+        // DebugLog is already capturing, so the two can be lined up by timestamp later.
+        if (_diagnosticLogging.value && com.example.opendash.util.RideLogFile.isActive) {
+            val nowMs = System.currentTimeMillis()
+            if (nowMs - lastGpsLogAt >= 1_000) {
+                lastGpsLogAt = nowMs
+                DebugLog.i("RideLogGps") {
+                    "speedMps=${loc?.speed ?: -1f} lat=${loc?.latitude ?: 0.0} lng=${loc?.longitude ?: 0.0} bearing=${loc?.bearing ?: -1f}"
+                }
+            }
+        }
+
         val r = route
         val dLat = destLat; val dLng = destLng
 

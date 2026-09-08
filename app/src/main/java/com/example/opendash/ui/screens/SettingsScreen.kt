@@ -1,10 +1,12 @@
 package com.example.opendash.ui.screens
 
+import android.content.Intent
 import android.graphics.BitmapFactory
 import android.graphics.ImageDecoder
 import android.media.MediaMetadataRetriever
 import android.net.Uri
 import android.os.Build
+import androidx.core.content.FileProvider
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
@@ -285,6 +287,50 @@ fun SettingsScreen(
             SettingsDivider(Modifier.padding(horizontal = 6.dp))
             SettingRow(OpenDashIcons.Dash, "Keep dash awake", "Prevent Tripper sleep",
                 control = { SettingsToggle(keepAwake) { keepAwake = it } }, last = true)
+        }
+
+        SectionLabel("Diagnostics")
+        run {
+            val diagnosticLogging by dashViewModel.diagnosticLogging.collectAsState()
+            var shareMessage by remember { mutableStateOf<String?>(null) }
+            SettingsGroup(padding = 6.dp) {
+                SettingRow(
+                    OpenDashIcons.Bell,
+                    "Capture dash diagnostic log",
+                    "Records dash bytes + GPS speed to a file while connected, for offline analysis (no debugger needed)",
+                    control = { SettingsToggle(diagnosticLogging) { dashViewModel.setDiagnosticLogging(it) } },
+                )
+                SettingsDivider(Modifier.padding(horizontal = 6.dp))
+                SettingRow(
+                    OpenDashIcons.Sync,
+                    "Share latest capture",
+                    shareMessage ?: "Send the most recent ride's log file",
+                    control = {
+                        OpenDashBtn(
+                            "Share",
+                            onClick = {
+                                val file = dashViewModel.latestRideLogFile()
+                                if (file == null) {
+                                    shareMessage = "No capture yet — connect to the dash with capture on"
+                                } else {
+                                    runCatching {
+                                        val uri = FileProvider.getUriForFile(ctx, "${ctx.packageName}.fileprovider", file)
+                                        val send = Intent(Intent.ACTION_SEND).apply {
+                                            type = "text/plain"
+                                            putExtra(Intent.EXTRA_STREAM, uri)
+                                            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                                        }
+                                        ctx.startActivity(Intent.createChooser(send, "Share dash diagnostic log"))
+                                    }.onFailure { shareMessage = "Couldn't share: ${it.message}" }
+                                }
+                            },
+                            variant = BtnVariant.Secondary,
+                            size = BtnSize.Sm,
+                        )
+                    },
+                    last = true,
+                )
+            }
         }
 
         SectionLabel("Media & calls on dash")
