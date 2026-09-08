@@ -6,7 +6,6 @@ import java.io.FileOutputStream
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
-import java.util.concurrent.atomic.AtomicReference
 
 /**
  * Optional plain-text capture of [DebugLog] output to a file, for analyzing a ride
@@ -26,36 +25,52 @@ import java.util.concurrent.atomic.AtomicReference
 object RideLogFile {
     private const val DIR_NAME = "exports/dash_logs"
     private const val MAX_TOTAL_BYTES = 50L * 1024 * 1024 // 50 MB across all captures combined
+
+    // SimpleDateFormat is NOT thread-safe, and DebugLog is called from several
+    // dispatchers at once (DashSession on IO, DashViewModel's frame loop on
+    // Default, and any other subsystem using DebugLog while capture is on) —
+    // every access below (formatting, the stream itself) goes through [lock].
+    private val lock = Any()
     private val timestampFmt = SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS", Locale.US)
     private val fileNameFmt = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.US)
 
-    private val writer = AtomicReference<FileOutputStream?>(null)
-    @Volatile private var currentFile: File? = null
+    private var writer: FileOutputStream? = null
 
-    val isActive: Boolean get() = writer.get() != null
+    val isActive: Boolean get() = synchronized(lock) { writer != null }
 
     fun start(context: Context) {
-        if (isActive) return
-        val dir = File(context.cacheDir, DIR_NAME).apply { mkdirs() }
-        enforceCap(dir)
-        val file = File(dir, "ride_${fileNameFmt.format(Date())}.log")
-        runCatching {
-            writer.set(FileOutputStream(file, true))
-            currentFile = file
-            append("RideLog", "I", "=== capture started: ${file.name} ===")
+        synchronized(lock) {
+            if (writer != null) return
+            val dir = File(context.cacheDir, DIR_NAME).apply { mkdirs() }
+            enforceCap(dir)
+            val file = File(dir, "ride_${fileNameFmt.format(Date())}.log")
+            runCatching {
+                writer = FileOutputStream(file, true)
+                writeLocked("RideLog", "I", "=== capture started: ${file.name} ===")
+            }
         }
     }
 
     fun stop() {
-        val w = writer.getAndSet(null) ?: return
-        runCatching { append("RideLog", "I", "=== capture stopped ===") }
-        runCatching { w.close() }
+        synchronized(lock) {
+            val w = writer ?: return
+            runCatching { writeLocked("RideLog", "I", "=== capture stopped ===") }
+            runCatching { w.close() }
+            writer = null
+        }
     }
 
     fun append(tag: String, level: String, message: String) {
-        val w = writer.get() ?: return
+        synchronized(lock) {
+            if (writer == null) return
+            writeLocked(tag, level, message)
+        }
+    }
+
+    /** Caller must hold [lock] and have already checked [writer] is non-null. */
+    private fun writeLocked(tag: String, level: String, message: String) {
         val line = "${timestampFmt.format(Date())} $level/$tag: $message\n"
-        runCatching { w.write(line.toByteArray(Charsets.UTF_8)) }
+        runCatching { writer?.write(line.toByteArray(Charsets.UTF_8)) }
     }
 
     fun latestFile(context: Context): File? {
