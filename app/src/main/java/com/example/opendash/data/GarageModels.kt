@@ -74,9 +74,15 @@ data class OfficialMaintenanceSchedule(
     val manualPages: String,
 )
 
-/** Official UK Himalayan 450 owner's manual, Periodical Maintenance, printed pp. 122-127. */
-object Himalayan450MaintenanceSchedule {
-    private const val SOURCE_PAGES = "Owner's Manual, Periodical Maintenance, pp. 122-127"
+/**
+ * UNVERIFIED — ported from the Himalayan 450's owner's manual intervals (same Sherpa 450
+ * engine platform) as a placeholder, pending confirmation against the actual Guerrilla 450
+ * owner's manual. Unlike the prior Himalayan dataset (sourced from specific cited pages),
+ * these numbers have NOT been checked against a real Guerrilla 450 manual — treat as a
+ * best-guess starting point, not a citation, until replaced with real page references.
+ */
+object Guerrilla450MaintenanceSchedule {
+    private const val SOURCE_PAGES = "UNVERIFIED — ported from Himalayan 450 manual, pending Guerrilla 450 manual confirmation"
 
     fun forItem(item: MaintenanceItem): OfficialMaintenanceSchedule? {
         if (item.vehicleId != VehicleStore.DEFAULT_VEHICLE_ID) return null

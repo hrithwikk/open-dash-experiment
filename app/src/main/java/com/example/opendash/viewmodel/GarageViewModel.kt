@@ -5,7 +5,7 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.opendash.data.Expense
 import com.example.opendash.data.FuelFillup
-import com.example.opendash.data.Himalayan450MaintenanceSchedule
+import com.example.opendash.data.Guerrilla450MaintenanceSchedule
 import com.example.opendash.data.MaintenanceItem
 import com.example.opendash.data.OfficialMaintenanceSchedule
 import com.example.opendash.data.OpenDashCurrency
@@ -34,7 +34,7 @@ data class MaintRow(
 
 data class GarageUi(
     val activeVehicleId: String = VehicleStore.DEFAULT_VEHICLE_ID,
-    val activeVehicleName: String = "Himalayan 450",
+    val activeVehicleName: String = "Guerrilla 450",
     val odometerKm: Int = 0,
     val fuel: List<FuelRow> = emptyList(),     // newest first; kmpl vs the prior fill
     val maint: List<MaintRow> = emptyList(),
@@ -90,7 +90,7 @@ class GarageViewModel(app: Application) : AndroidViewModel(app) {
         val recent = fuelRows.filter { it.fill.dateMs >= cutoff }
         val kmpls = recent.mapNotNull { it.kmpl }
         val maint = repo.maintenanceItems(vehicle.id).map { m ->
-            val official = Himalayan450MaintenanceSchedule.forItem(m)
+            val official = Guerrilla450MaintenanceSchedule.forItem(m)
             val remaining = m.lastDoneOdoKm + m.intervalKm - odo
             val intervalMonths = official?.intervalMonths
             val remainingDays = intervalMonths?.let { months ->

@@ -4,7 +4,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Test
 
-class Himalayan450MaintenanceScheduleTest {
+class Guerrilla450MaintenanceScheduleTest {
     private fun item(name: String, vehicleId: String = VehicleStore.DEFAULT_VEHICLE_ID) =
         MaintenanceItem(
             name = name,
@@ -18,7 +18,7 @@ class Himalayan450MaintenanceScheduleTest {
     @Test
     fun replacementItemsUseOfficialRecurringSchedule() {
         for (name in listOf("Engine oil", "Oil filter", "Air filter")) {
-            val schedule = Himalayan450MaintenanceSchedule.forItem(item(name))!!
+            val schedule = Guerrilla450MaintenanceSchedule.forItem(item(name))!!
             assertEquals(MaintenanceAction.REPLACE, schedule.action)
             assertEquals(10_000, schedule.intervalKm)
             assertEquals(12, schedule.intervalMonths)
@@ -28,7 +28,7 @@ class Himalayan450MaintenanceScheduleTest {
     @Test
     fun wearItemsAreInspectionsNotFixedReplacementClaims() {
         for (name in listOf("Brake pads - front", "Brake pads - rear", "Front tyre", "Rear tyre")) {
-            val schedule = Himalayan450MaintenanceSchedule.forItem(item(name))!!
+            val schedule = Guerrilla450MaintenanceSchedule.forItem(item(name))!!
             assertEquals(MaintenanceAction.INSPECT, schedule.action)
             assertEquals(10_000, schedule.intervalKm)
             assertEquals(12, schedule.intervalMonths)
@@ -37,7 +37,7 @@ class Himalayan450MaintenanceScheduleTest {
 
     @Test
     fun driveChainUsesFiveHundredKilometreMaintenanceSchedule() {
-        val schedule = Himalayan450MaintenanceSchedule.forItem(item("Drive chain"))!!
+        val schedule = Guerrilla450MaintenanceSchedule.forItem(item("Drive chain"))!!
         assertEquals(MaintenanceAction.MAINTAIN, schedule.action)
         assertEquals(500, schedule.intervalKm)
         assertNull(schedule.intervalMonths)
@@ -45,6 +45,6 @@ class Himalayan450MaintenanceScheduleTest {
 
     @Test
     fun manualIsNotClaimedForOtherVehicles() {
-        assertNull(Himalayan450MaintenanceSchedule.forItem(item("Engine oil", "another-bike")))
+        assertNull(Guerrilla450MaintenanceSchedule.forItem(item("Engine oil", "another-bike")))
     }
 }

@@ -147,7 +147,7 @@ class OpenDashDb private constructor(context: Context) :
     }
 
     private fun seedMaintenanceForVehicle(db: SQLiteDatabase, vehicleId: String) {
-        // The bundled schedule is sourced specifically for the default Himalayan 450.
+        // The bundled schedule is sourced specifically for the default Guerrilla 450.
         // Other vehicles remain empty until the rider adds model-appropriate intervals.
         if (vehicleId != VehicleStore.DEFAULT_VEHICLE_ID) return
         val now = System.currentTimeMillis()

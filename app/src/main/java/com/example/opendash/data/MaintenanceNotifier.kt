@@ -29,7 +29,7 @@ object MaintenanceNotifier {
     /** An item is "due" once it's within the last 25% of its interval (matches the UI warn/alert tone). */
     private fun isDue(m: MaintenanceItem, odo: Int): Boolean {
         val distanceDue = (m.lastDoneOdoKm + m.intervalKm - odo) < m.intervalKm * 0.25
-        val schedule = Himalayan450MaintenanceSchedule.forItem(m)
+        val schedule = Guerrilla450MaintenanceSchedule.forItem(m)
         val months = schedule?.intervalMonths ?: return distanceDue
         val dueAt = Calendar.getInstance().apply {
             timeInMillis = m.lastDoneDateMs
@@ -84,7 +84,7 @@ object MaintenanceNotifier {
     private fun buildText(due: List<MaintenanceItem>, odo: Int): Pair<String, String> {
         fun line(m: MaintenanceItem): String {
             val remaining = m.lastDoneOdoKm + m.intervalKm - odo
-            val schedule = Himalayan450MaintenanceSchedule.forItem(m)
+            val schedule = Guerrilla450MaintenanceSchedule.forItem(m)
             val remainingDays = schedule?.intervalMonths?.let { months ->
                 val dueAt = Calendar.getInstance().apply {
                     timeInMillis = m.lastDoneDateMs

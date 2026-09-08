@@ -124,7 +124,7 @@ fun LoginScreen(
                 Spacer(Modifier.height(12.dp))
 
                 Text(
-                    "Your Himalayan's co-pilot.\nRoutes to the dash, eyes on the road.",
+                    "Your Guerrilla's co-pilot.\nRoutes to the dash, eyes on the road.",
                     color = TextMid,
                     fontSize = 14.sp,
                     lineHeight = 21.sp,

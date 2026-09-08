@@ -24,7 +24,7 @@ object VehicleStore {
 
     private val defaultVehicle = VehicleProfile(
         id = DEFAULT_VEHICLE_ID,
-        title = "Himalayan 450",
+        title = "Guerrilla 450",
         nickname = "Default vehicle",
         puc = "Not set",
         insurance = "Not set",

@@ -1,6 +1,6 @@
     # OpenDash
 
-Personal Android companion app for a **Royal Enfield Himalayan 450** motorcycle.
+Personal Android companion app for a **Royal Enfield Guerrilla 450** motorcycle.
 Single user (just me), Android-only, targeting a **Nothing Phone 3**. Not a
 product to sell — may be open-sourced, but built for my own bike only. No user
 personas, no client/enterprise concerns.
@@ -76,7 +76,7 @@ is isolated:
 ## Hard constraints / non-goals
 
 - **Android only.** No iOS.
-- **One bike** (Himalayan 450), **one dash target** (RE Tripper). No generic
+- **One bike** (Guerrilla 450), **one dash target** (RE Tripper). No generic
   multi-bike / multi-dash abstraction.
 - No personas, no branding-as-product, no team/lab infrastructure, no server-side
   PostGIS unless a real need appears. Keep it lean.

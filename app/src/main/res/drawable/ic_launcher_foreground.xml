@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Replaces the old cramped-text mockup (a literal screenshot of the dash bubble with
+     "HIMALAYAN 450 TRIPPER" + the Royal Enfield wordmark baked in as pixels — both
+     unreadable at launcher size and carrying more branding than a launcher icon should).
+     This is a clean vector gauge/speedometer glyph instead: a bezel, tick marks, and a
+     needle, echoing the round Tripper dash the app projects onto, with none of the text
+     that made the old icon illegible and none of the RE trademark literally baked in. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+
+    <!-- Outer bezel ring -->
+    <path
+        android:strokeColor="#B78B4B"
+        android:strokeWidth="3"
+        android:pathData="M 54,22 A 32,32 0 1,1 54,86 A 32,32 0 1,1 54,22" />
+
+    <!-- Major ticks (cardinal points) -->
+    <path android:strokeColor="#C6A46A" android:strokeWidth="3" android:pathData="M 54,23 L 54,32" />
+    <path android:strokeColor="#C6A46A" android:strokeWidth="3" android:pathData="M 85,54 L 76,54" />
+    <path android:strokeColor="#C6A46A" android:strokeWidth="3" android:pathData="M 54,85 L 54,76" />
+    <path android:strokeColor="#C6A46A" android:strokeWidth="3" android:pathData="M 23,54 L 32,54" />
+
+    <!-- Minor ticks -->
+    <path android:strokeColor="#A89B88" android:strokeWidth="1.5" android:pathData="M 69.5,27.15 L 67,31.48" />
+    <path android:strokeColor="#A89B88" android:strokeWidth="1.5" android:pathData="M 80.85,38.5 L 76.52,41" />
+    <path android:strokeColor="#A89B88" android:strokeWidth="1.5" android:pathData="M 80.85,69.5 L 76.52,67" />
+    <path android:strokeColor="#A89B88" android:strokeWidth="1.5" android:pathData="M 69.5,80.85 L 67,76.52" />
+    <path android:strokeColor="#A89B88" android:strokeWidth="1.5" android:pathData="M 38.5,80.85 L 41,76.52" />
+    <path android:strokeColor="#A89B88" android:strokeWidth="1.5" android:pathData="M 27.15,69.5 L 31.48,67" />
+    <path android:strokeColor="#A89B88" android:strokeWidth="1.5" android:pathData="M 27.15,38.5 L 31.48,41" />
+    <path android:strokeColor="#A89B88" android:strokeWidth="1.5" android:pathData="M 38.5,27.15 L 41,31.48" />
+
+    <!-- Needle, pointing up-right -->
+    <path
+        android:fillColor="#C6A46A"
+        android:pathData="M 76.5,38.5 L 57.5,51 L 61,57 Z" />
+
+    <!-- Hub -->
+    <path
+        android:fillColor="#B78B4B"
+        android:pathData="M 54,49 A 5,5 0 1,1 54,59 A 5,5 0 1,1 54,49" />
+    <path
+        android:fillColor="#080809"
+        android:pathData="M 54,52.2 A 1.8,1.8 0 1,1 54,55.8 A 1.8,1.8 0 1,1 54,52.2" />
+</vector>

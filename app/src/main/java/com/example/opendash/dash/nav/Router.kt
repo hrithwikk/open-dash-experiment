@@ -10,7 +10,7 @@ import java.net.URL
 /**
  * Fetches a road route from the public OSRM demo server. Called at planning time
  * (destination shared) while the phone still has internet — the result is cached
- * so riding can proceed offline. Driving profile suits the Himalayan fine.
+ * so riding can proceed offline. Driving profile suits the Guerrilla fine.
  */
 object Router {
     private const val TAG = "Router"
